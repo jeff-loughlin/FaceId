@@ -29,12 +29,12 @@
         private void InitializeComponent()
         {
             this.panel1 = new System.Windows.Forms.Panel();
+            this.configButton = new System.Windows.Forms.Button();
             this.trainButton = new System.Windows.Forms.Button();
             this.deletePersonButton = new System.Windows.Forms.Button();
             this.addPersonButton = new System.Windows.Forms.Button();
             this.deletePersonGroupButton = new System.Windows.Forms.Button();
             this.addPersonGroupButton = new System.Windows.Forms.Button();
-            this.addFromDirButton = new System.Windows.Forms.Button();
             this.deleteFacesButton = new System.Windows.Forms.Button();
             this.addFromFileButton = new System.Windows.Forms.Button();
             this.label3 = new System.Windows.Forms.Label();
@@ -50,7 +50,6 @@
             this.openFileDialog = new System.Windows.Forms.OpenFileDialog();
             this.prevButton = new System.Windows.Forms.Button();
             this.nextButton = new System.Windows.Forms.Button();
-            this.configButton = new System.Windows.Forms.Button();
             this.panel1.SuspendLayout();
             this.panel2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.imgBox)).BeginInit();
@@ -65,7 +64,6 @@
             this.panel1.Controls.Add(this.addPersonButton);
             this.panel1.Controls.Add(this.deletePersonGroupButton);
             this.panel1.Controls.Add(this.addPersonGroupButton);
-            this.panel1.Controls.Add(this.addFromDirButton);
             this.panel1.Controls.Add(this.deleteFacesButton);
             this.panel1.Controls.Add(this.addFromFileButton);
             this.panel1.Controls.Add(this.label3);
@@ -77,6 +75,16 @@
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(814, 100);
             this.panel1.TabIndex = 0;
+            // 
+            // configButton
+            // 
+            this.configButton.Location = new System.Drawing.Point(720, 8);
+            this.configButton.Name = "configButton";
+            this.configButton.Size = new System.Drawing.Size(75, 23);
+            this.configButton.TabIndex = 14;
+            this.configButton.Text = "Configure...";
+            this.configButton.UseVisualStyleBackColor = true;
+            this.configButton.Click += new System.EventHandler(this.configButton_Click);
             // 
             // trainButton
             // 
@@ -128,18 +136,9 @@
             this.addPersonGroupButton.UseVisualStyleBackColor = true;
             this.addPersonGroupButton.Click += new System.EventHandler(this.addPersonGroupButton_Click);
             // 
-            // addFromDirButton
-            // 
-            this.addFromDirButton.Location = new System.Drawing.Point(163, 64);
-            this.addFromDirButton.Name = "addFromDirButton";
-            this.addFromDirButton.Size = new System.Drawing.Size(115, 23);
-            this.addFromDirButton.TabIndex = 8;
-            this.addFromDirButton.Text = "Add from directory";
-            this.addFromDirButton.UseVisualStyleBackColor = true;
-            // 
             // deleteFacesButton
             // 
-            this.deleteFacesButton.Location = new System.Drawing.Point(284, 64);
+            this.deleteFacesButton.Location = new System.Drawing.Point(163, 64);
             this.deleteFacesButton.Name = "deleteFacesButton";
             this.deleteFacesButton.Size = new System.Drawing.Size(75, 23);
             this.deleteFacesButton.TabIndex = 7;
@@ -153,7 +152,7 @@
             this.addFromFileButton.Name = "addFromFileButton";
             this.addFromFileButton.Size = new System.Drawing.Size(75, 23);
             this.addFromFileButton.TabIndex = 6;
-            this.addFromFileButton.Text = "Add from file";
+            this.addFromFileButton.Text = "Add...";
             this.addFromFileButton.UseVisualStyleBackColor = true;
             this.addFromFileButton.Click += new System.EventHandler(this.faceUploadButton_Click);
             // 
@@ -228,7 +227,8 @@
             this.imgInfoBox.Location = new System.Drawing.Point(413, 4);
             this.imgInfoBox.Multiline = true;
             this.imgInfoBox.Name = "imgInfoBox";
-            this.imgInfoBox.Size = new System.Drawing.Size(398, 106);
+            this.imgInfoBox.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+            this.imgInfoBox.Size = new System.Drawing.Size(398, 116);
             this.imgInfoBox.TabIndex = 2;
             // 
             // imgBox
@@ -276,16 +276,6 @@
             this.nextButton.UseVisualStyleBackColor = true;
             this.nextButton.Click += new System.EventHandler(this.nextButton_Click);
             // 
-            // configButton
-            // 
-            this.configButton.Location = new System.Drawing.Point(720, 8);
-            this.configButton.Name = "configButton";
-            this.configButton.Size = new System.Drawing.Size(75, 23);
-            this.configButton.TabIndex = 14;
-            this.configButton.Text = "Configure...";
-            this.configButton.UseVisualStyleBackColor = true;
-            this.configButton.Click += new System.EventHandler(this.configButton_Click);
-            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -321,7 +311,6 @@
         private System.Windows.Forms.OpenFileDialog openFileDialog;
         private System.Windows.Forms.Button deleteFacesButton;
         private System.Windows.Forms.Button addPersonGroupButton;
-        private System.Windows.Forms.Button addFromDirButton;
         private System.Windows.Forms.Button deletePersonGroupButton;
         private System.Windows.Forms.Button deletePersonButton;
         private System.Windows.Forms.Button addPersonButton;

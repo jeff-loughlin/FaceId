@@ -72,7 +72,6 @@ namespace FaceId
 
             personSelector.Enabled = false;
             addFromFileButton.Enabled = false;
-            addFromDirButton.Enabled = false;
             deletePersonGroupButton.Enabled = false;
             deletePersonButton.Enabled = false;
             deleteFacesButton.Enabled = false;
@@ -154,7 +153,6 @@ namespace FaceId
         private void personSelector_SelectedIndexChanged(object sender, EventArgs e)
         {
             addFromFileButton.Enabled = true;
-            addFromDirButton.Enabled = true;
             deletePersonButton.Enabled = true;
             deleteFacesButton.Enabled = true;
             addPersonButton.Enabled = false;
@@ -165,21 +163,39 @@ namespace FaceId
             DialogResult result = openFileDialog.ShowDialog();
             if (result == DialogResult.OK)
             {
-                // Send image to server
-                System.IO.MemoryStream imageMemoryStream = new MemoryStream();
-                System.IO.FileStream imageFileStream = new FileStream(openFileDialog.FileName, FileMode.Open);
-                ResizeImage(imageFileStream, imageMemoryStream);
-                imageFileStream.Close();
+                // Send image(s) to server
+                imgInfoBox.Text = "";
+                int count = 0;
+                foreach (string filename in openFileDialog.FileNames)
+                {
+                    System.IO.MemoryStream imageMemoryStream = new MemoryStream();
+                    System.IO.FileStream imageFileStream = new FileStream(filename, FileMode.Open);
+                    ResizeImage(imageFileStream, imageMemoryStream);
+                    imageFileStream.Close();
 
-                PersonGroup selectedPersonGroup = personGroups[personGroupSelector.SelectedIndex];
-                Person selectedPerson = persons[personSelector.SelectedIndex];
-                try
-                {
-                    await faceServiceClient.AddPersonFaceInPersonGroupAsync(selectedPersonGroup.PersonGroupId, selectedPerson.PersonId, imageMemoryStream);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
+                    PersonGroup selectedPersonGroup = personGroups[personGroupSelector.SelectedIndex];
+                    Person selectedPerson = persons[personSelector.SelectedIndex];
+                    try
+                    {
+                        await faceServiceClient.AddPersonFaceInPersonGroupAsync(selectedPersonGroup.PersonGroupId, selectedPerson.PersonId, imageMemoryStream);
+                        imgInfoBox.Text += filename + ": added successfully\r\n";
+                    }
+                    catch (FaceAPIException ex)
+                    {
+                        imgInfoBox.Text += filename + ": " + ex.ErrorMessage + "(" + ex.ErrorCode + ")\r\n";
+
+                        // This shouldn't happen because of the throttling that happens below, but handle it just in case
+                        if (ex.ErrorCode == "RateLimitExceeded")
+                            System.Threading.Thread.Sleep(60000);
+                    }
+
+                    // We're only allowed 20 API calls per minute.  If we're up to 20, wait a minute before proceeding.
+                    if (++count > 19)
+                    {
+                        imgInfoBox.Text += "Reached rate limit - waiting 60 seconds\r\n";
+                        System.Threading.Thread.Sleep(60000);
+                        count = 0;
+                    }
                 }
             }
         }
@@ -258,7 +274,6 @@ namespace FaceId
             deletePersonGroupButton.Enabled = false;
             addPersonButton.Enabled = false;
             deletePersonButton.Enabled = false;
-            addFromDirButton.Enabled = false;
             addFromFileButton.Enabled = false;
             deleteFacesButton.Enabled = false;
             personSelector.Enabled = false;
@@ -269,7 +284,6 @@ namespace FaceId
         {
             addPersonButton.Enabled = true;
             deletePersonButton.Enabled = false;
-            addFromDirButton.Enabled = false;
             addFromFileButton.Enabled = false;
             deleteFacesButton.Enabled = false;
         }
