@@ -1,6 +1,11 @@
 # FaceId
 
 Uses Microsoft's Face API from Azure Cognitive Services to identify faces in an image.
+This program is not intended to be very useful, but I wrote it so I could learn about
+how to use the Azure Face API.  It could be turned into something useful without
+too much work, maybe tagging photos with the names of people in them, or sorting photos 
+into different directories based on the people in them, or something.  For now, all it
+does is draw boxes around the faces it recognizes and displays their name.
 
 You need to obtain an API key and URL from Microsoft before you can use this program.
 
@@ -40,5 +45,5 @@ You need to obtain an API key and URL from Microsoft before you can use this pro
         or use multiselect by holding the shift or ctrl key.  Your photos will be displayed one at a time with
         the faces labeled for people it can identify.  Unknown people will just be labeled as "Unknown male" or
         "Unknown female", along with an esimated age.  The age estimate is usually pretty accurate for young
-	children and older adults, but seems to vary wildly with people in the 18-35 age group.
+        children and older adults, but seems to vary wildly with people in the 18-35 age group.
         
