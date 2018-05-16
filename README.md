@@ -25,7 +25,7 @@ You need to obtain an API key and URL from Microsoft before you can use this pro
         button.
         
     7.  Upload some training photos.  Select your Person Group, then select the Person you want to upload
-        training photos for.  Click the Add From File or Add from Directory button and navigate to the file
+        training photos for.  Click the "Add From File" or "Add from Directory" button and navigate to the file
         or directory containing pictures of the person's face.  For best results, you should upload at least
         10 training photos for each person, from different angles and in different lighting conditions.  The
         more photos you add, and the more varied they are, the better the chance for the program to identify
@@ -37,6 +37,8 @@ You need to obtain an API key and URL from Microsoft before you can use this pro
         take more than a minute or two, depending on how many training photos you've given it.
         
     9.  Now click the "Open..." button at the bottom right.  Select a photo containing a face you want to identify, 
-        or use multiselect by holding to the shift or ctrl key.  You photos will be displayed one at a time with
-        the faces labeled for people it can identify.  Unknown people will be label as "Unknown male" or "Unknown female".
+        or use multiselect by holding the shift or ctrl key.  Your photos will be displayed one at a time with
+        the faces labeled for people it can identify.  Unknown people will just be labeled as "Unknown male" or
+        "Unknown female", along with an esimated age.  The age estimate is usually pretty accurate for young
+	children and older adults, but seems to vary wildly with people in the 18-35 age group.
         
