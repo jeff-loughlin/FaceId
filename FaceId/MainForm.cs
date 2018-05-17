@@ -1,4 +1,6 @@
-﻿using Microsoft.ProjectOxford.Face;
+﻿#define USE_OPENCV
+
+using Microsoft.ProjectOxford.Face;
 using Microsoft.ProjectOxford.Face.Contract;
 using System;
 using System.Collections;
@@ -13,6 +15,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using OpenCvSharp;
 
 namespace FaceId
 {
@@ -29,8 +32,108 @@ namespace FaceId
             InitializeComponent();
         }
 
+
+#if USE_OPENCV
+        CascadeClassifier classifier = null;
+        private OpenCvSharp.Rect [] DetectFacesInImage(Mat img)
+        {
+            if (classifier == null)
+            {
+                classifier = new CascadeClassifier(@"E:\opencv\sources\data\haarcascades\haarcascade_frontalface_alt.xml");
+//                var nestedCascade = new CascadeClassifier(@"..\..\Data\haarcascade_eye_tree_eyeglasses.xml");
+            }
+
+            OpenCvSharp.Rect [] faces = classifier.DetectMultiScale(
+                 image: img,
+                 scaleFactor: 1.1,
+                 minNeighbors: 2,
+                 flags: HaarDetectionType.DoRoughSearch | HaarDetectionType.ScaleImage,
+                 minSize: new OpenCvSharp.Size(30, 30));
+            if (faces.Length != 1)
+            {
+                Console.WriteLine("Too many or not enough faces detected.");
+            }
+
+            return faces;
+        }
+#endif
+
         private async void Form1_Load(object sender, EventArgs e)
         {
+#if USE_OPENCV
+            int numTrainingFaces = 6;
+            Mat[] images = new Mat [numTrainingFaces];
+            int[] labels = new int [numTrainingFaces];
+
+            for (int n = 0; n < numTrainingFaces; n++)
+                images[n] = new Mat();
+
+          
+            Mat image = new Mat("e:/pics/DS2_0541.jpg", ImreadModes.GrayScale);
+            OpenCvSharp.Rect[] faces = DetectFacesInImage(image);
+            Mat crop = new Mat(image, faces[0]);
+            Cv2.Resize(crop, images[0], new OpenCvSharp.Size(400,400));
+            labels[0] = 0;
+
+            image = new Mat("e:/pics/DS2_0903-crop.jpg", ImreadModes.GrayScale);
+            faces = DetectFacesInImage(image);
+            crop = new Mat(image, faces[0]);
+            Cv2.Resize(crop, images[1], new OpenCvSharp.Size(400, 400));
+            labels[1] = 0;
+
+            image = new Mat("e:/pics/DS2_1013.jpg", ImreadModes.GrayScale);
+            faces = DetectFacesInImage(image);
+            crop = new Mat(image, faces[0]);
+            Cv2.Resize(crop, images[2], new OpenCvSharp.Size(400, 400));
+            labels[2] = 0;
+
+            image = new Mat("e:/pics/DS2_1014.jpg", ImreadModes.GrayScale);
+            faces = DetectFacesInImage(image);
+            crop = new Mat(image, faces[0]);
+            Cv2.Resize(crop, images[3], new OpenCvSharp.Size(400, 400));
+            labels[3] = 0;
+
+            image = new Mat("e:/pics/3037 - portrait crop.jpg", ImreadModes.GrayScale);
+            faces = DetectFacesInImage(image);
+            crop = new Mat(image, faces[0]);
+            Cv2.Resize(crop, images[4], new OpenCvSharp.Size(400, 400));
+            labels[4] = 1;
+
+            image = new Mat("e:/pics/DS2_0433-portrait.jpg", ImreadModes.GrayScale);
+            faces = DetectFacesInImage(image);
+            crop = new Mat(image, faces[0]);
+            Cv2.Resize(crop, images[5], new OpenCvSharp.Size(400, 400));
+            labels[5] = 1;
+
+            for (int n = 0; n < numTrainingFaces; n++)
+            {
+                Cv2.ImShow("zzz", images[n]);
+                Cv2.WaitKey(0);
+            }
+
+            OpenCvSharp.Face.FaceRecognizer faceRecognizer = OpenCvSharp.Face.FisherFaceRecognizer.Create();
+            faceRecognizer.Train(images, labels);
+            faceServiceClient = null;
+
+            Mat img = new Mat("e:/pics/DS2_3832.jpg", ImreadModes.GrayScale);
+            faces = DetectFacesInImage(img);
+            Mat testImage1 = new Mat();
+            crop = new Mat(img, faces[0]);
+            Cv2.Resize(crop, testImage1, new OpenCvSharp.Size(400, 400));
+            Cv2.ImShow("zzz", testImage1);
+            Cv2.WaitKey(0);
+            int result = faceRecognizer.Predict(testImage1);
+
+            img = new Mat("e:/pics/DS2_4522.jpg", ImreadModes.GrayScale);
+            faces = DetectFacesInImage(img);
+            Mat testImage2 = new Mat();
+            crop = new Mat(img, faces[0]);
+            Cv2.Resize(crop, testImage2, new OpenCvSharp.Size(400, 400));
+            Cv2.ImShow("zzz", testImage2);
+            Cv2.WaitKey(0);
+            int result2 = faceRecognizer.Predict(testImage2);
+
+#else
             try
             {
                 using (StreamReader configFile = new StreamReader("./FaceAPI.config"))
@@ -65,6 +168,7 @@ namespace FaceId
 
             faceServiceClient = new FaceServiceClient(apiKey, url);
             personGroups = await GetPersonGroups();
+#endif
             foreach (PersonGroup personGroup in personGroups)
             {
                 personGroupSelector.Items.Add(personGroup.Name);
@@ -429,7 +533,7 @@ namespace FaceId
 
         private void imgBox_Paint(object sender, PaintEventArgs e)
         {
-            Point p = imgBox.PointToClient(Cursor.Position);
+            System.Drawing.Point p = imgBox.PointToClient(Cursor.Position);
 
             Rectangle scaledRect;
 
