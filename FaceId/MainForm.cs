@@ -506,13 +506,13 @@ namespace FaceId
                 if (name == "Unknown" && faceAttributes != null)
                 {
                     string [] parts = faceAttributes.Split('|');
-                    for (n = 0; n < parts.Length; n++)
+                    for (int m = 0; m < parts.Length; m++)
                     {
                         string s;
-                        if (n == 1)
-                            s = String.Format("{0} {1}", name, parts[n]);
+                        if (m == 1)
+                            s = String.Format("{0} {1}", name, parts[m]);
                         else
-                            s = parts[n];
+                            s = parts[m];
                         e.Graphics.DrawString(s, font, brush, (float)(left), (float)(top + textPos));
                         textPos -= 15;
                     }
