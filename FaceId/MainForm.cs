@@ -39,7 +39,7 @@ namespace FaceId
         {
             if (classifier == null)
             {
-                classifier = new CascadeClassifier(@"E:\opencv\sources\data\haarcascades\haarcascade_frontalface_alt.xml");
+                classifier = new CascadeClassifier(@".\haarcascade_frontalface_alt.xml");
 //                var nestedCascade = new CascadeClassifier(@"..\..\Data\haarcascade_eye_tree_eyeglasses.xml");
             }
 
@@ -69,70 +69,60 @@ namespace FaceId
                 images[n] = new Mat();
 
           
-            Mat image = new Mat("e:/pics/DS2_0541.jpg", ImreadModes.GrayScale);
+            Mat image = new Mat("g:/photos/wallpaper/DS2_0541.jpg", ImreadModes.GrayScale);
             OpenCvSharp.Rect[] faces = DetectFacesInImage(image);
             Mat crop = new Mat(image, faces[0]);
             Cv2.Resize(crop, images[0], new OpenCvSharp.Size(400,400));
             labels[0] = 0;
 
-            image = new Mat("e:/pics/DS2_0903-crop.jpg", ImreadModes.GrayScale);
+            image = new Mat("g:/photos/wallpaper/DS2_0903-crop.jpg", ImreadModes.GrayScale);
             faces = DetectFacesInImage(image);
             crop = new Mat(image, faces[0]);
             Cv2.Resize(crop, images[1], new OpenCvSharp.Size(400, 400));
             labels[1] = 0;
 
-            image = new Mat("e:/pics/DS2_1013.jpg", ImreadModes.GrayScale);
+            image = new Mat("g:/photos/wallpaper/DS2_1013.jpg", ImreadModes.GrayScale);
             faces = DetectFacesInImage(image);
             crop = new Mat(image, faces[0]);
             Cv2.Resize(crop, images[2], new OpenCvSharp.Size(400, 400));
             labels[2] = 0;
 
-            image = new Mat("e:/pics/DS2_1014.jpg", ImreadModes.GrayScale);
+            image = new Mat("g:/photos/wallpaper/DS2_1014.jpg", ImreadModes.GrayScale);
             faces = DetectFacesInImage(image);
             crop = new Mat(image, faces[0]);
             Cv2.Resize(crop, images[3], new OpenCvSharp.Size(400, 400));
             labels[3] = 0;
 
-            image = new Mat("e:/pics/3037 - portrait crop.jpg", ImreadModes.GrayScale);
+            image = new Mat("g:/photos/wallpaper/3037 - portrait crop.jpg", ImreadModes.GrayScale);
             faces = DetectFacesInImage(image);
             crop = new Mat(image, faces[0]);
             Cv2.Resize(crop, images[4], new OpenCvSharp.Size(400, 400));
             labels[4] = 1;
 
-            image = new Mat("e:/pics/DS2_0433-portrait.jpg", ImreadModes.GrayScale);
+            image = new Mat("g:/photos/wallpaper/DS2_0433-portrait.jpg", ImreadModes.GrayScale);
             faces = DetectFacesInImage(image);
             crop = new Mat(image, faces[0]);
             Cv2.Resize(crop, images[5], new OpenCvSharp.Size(400, 400));
             labels[5] = 1;
 
-            for (int n = 0; n < numTrainingFaces; n++)
-            {
-                Cv2.ImShow("zzz", images[n]);
-                Cv2.WaitKey(0);
-            }
-
             OpenCvSharp.Face.FaceRecognizer faceRecognizer = OpenCvSharp.Face.FisherFaceRecognizer.Create();
             faceRecognizer.Train(images, labels);
             faceServiceClient = null;
 
-            Mat img = new Mat("e:/pics/DS2_3832.jpg", ImreadModes.GrayScale);
+            Mat img = new Mat("g:/photos/wallpaper/DSC_0630.jpg", ImreadModes.GrayScale);
             faces = DetectFacesInImage(img);
             Mat testImage1 = new Mat();
             crop = new Mat(img, faces[0]);
             Cv2.Resize(crop, testImage1, new OpenCvSharp.Size(400, 400));
-            Cv2.ImShow("zzz", testImage1);
-            Cv2.WaitKey(0);
             int result = faceRecognizer.Predict(testImage1);
 
-            img = new Mat("e:/pics/DS2_4522.jpg", ImreadModes.GrayScale);
+            img = new Mat("g:/photos/wallpaper/DSC_5567.jpg", ImreadModes.GrayScale);
             faces = DetectFacesInImage(img);
             Mat testImage2 = new Mat();
             crop = new Mat(img, faces[0]);
             Cv2.Resize(crop, testImage2, new OpenCvSharp.Size(400, 400));
-            Cv2.ImShow("zzz", testImage2);
-            Cv2.WaitKey(0);
             int result2 = faceRecognizer.Predict(testImage2);
-
+            personGroups = await GetPersonGroups();
 #else
             try
             {
@@ -225,14 +215,71 @@ namespace FaceId
 
         private async Task<PersonGroup []> GetPersonGroups()
         {
+#if USE_OPENCV
+            // Create the Data/ directory if it doesn't already exist
+            if (!Directory.Exists("Data"))
+            {
+                Directory.CreateDirectory("./Data");
+            }
+
+            List<PersonGroup>pList = new List<PersonGroup>();
+            try
+            {
+                string [] directories = Directory.GetDirectories("Data");
+                foreach (string directory in directories)
+                {
+                    PersonGroup p = new PersonGroup();
+                    p.Name = directory.ToString().Split('\\')[1];
+                    p.PersonGroupId = directory.ToString();
+                    pList.Add(p);
+                }
+            }
+            catch (Exception ex)
+            {
+
+            }
+            return pList.ToArray();
+#else
             var personGroups = await faceServiceClient.ListPersonGroupsAsync();
             return personGroups.ToArray();
+#endif
         }
 
         private async Task<Person []> GetPersonsInPersonGroup(string personGroupId)
         {
+#if USE_OPENCV
+            List<Person> pList = new List<Person>();
+            foreach (PersonGroup group in personGroups)
+            {
+                if (group.PersonGroupId == personGroupId)
+                {
+                    try
+                    {
+                        using (StreamReader s = new StreamReader(group.PersonGroupId + "/Persons.dat"))
+                        {
+                            while (!s.EndOfStream)
+                            {
+                                string line = s.ReadLine();
+                                string[] parts = line.Split('|');
+                                Person p = new Person();
+                                p.Name = parts[0];
+                                p.UserData = parts[1];
+                                pList.Add(p);
+                            }
+                            s.Close();
+                        }
+                    }
+                    catch(Exception ex)
+                    {
+
+                    }
+                }
+            }
+            return pList.ToArray();
+#else
             var persons = await faceServiceClient.ListPersonsInPersonGroupAsync(personGroupId);
             return persons.ToArray();
+#endif
         }
 
         private async void personGroupSelector_SelectedIndexChanged(object sender, EventArgs e)
@@ -272,6 +319,15 @@ namespace FaceId
                 int count = 0;
                 foreach (string filename in openFileDialog.FileNames)
                 {
+#if USE_OPENCV
+                    PersonGroup selectedPersonGroup = personGroups[personGroupSelector.SelectedIndex];
+                    Person selectedPerson = persons[personSelector.SelectedIndex];
+                    using (StreamWriter s = new StreamWriter(selectedPersonGroup.PersonGroupId + "/TrainData.dat", true))
+                    {
+                        s.WriteLine(filename + "|" + selectedPerson.UserData);
+                        s.Close();
+                    }
+#else
                     System.IO.MemoryStream imageMemoryStream = new MemoryStream();
                     System.IO.FileStream imageFileStream = new FileStream(filename, FileMode.Open);
                     ResizeImage(imageFileStream, imageMemoryStream);
@@ -300,6 +356,7 @@ namespace FaceId
                         System.Threading.Thread.Sleep(60000);
                         count = 0;
                     }
+#endif
                 }
             }
         }
@@ -348,9 +405,15 @@ namespace FaceId
             {
                 if (personGroupSelector.Text.Length > 0)
                 {
+#if USE_OPENCV
+                    if (!Directory.Exists("Data/" + personGroupSelector.Text))
+                    {
+                        Directory.CreateDirectory("Data/" + personGroupSelector.Text);
+                    }
+#else
                     await faceServiceClient.CreatePersonGroupAsync(personGroupSelector.Text.ToLower(), personGroupSelector.Text);
+#endif
                     personGroups = await GetPersonGroups();
-                    personGroupSelector.SelectedIndex = 0;
                     personSelector.SelectedIndex = -1;
                     if (personGroupSelector.Items.Count > 0)
                         personGroupSelector.Text = personGroupSelector.Items[0].ToString();
@@ -367,7 +430,7 @@ namespace FaceId
                     personSelector.Items.Clear();
                 }
             }
-            addPersonGroupButton.Enabled = false;
+                    addPersonGroupButton.Enabled = false;
         }
 
         private void personGroupSelector_KeyPress(object sender, KeyPressEventArgs e)
@@ -399,10 +462,45 @@ namespace FaceId
             {
                 if (personSelector.Text.Length > 0)
                 {
+#if USE_OPENCV
+                    int maxPersonNum = 0;
+                    try
+                    {
+                        using (StreamReader r = new StreamReader(selectedPersonGroup.PersonGroupId + "/Persons.dat"))
+                        {
+                            while (!r.EndOfStream)
+                            {
+                                string line = r.ReadLine();
+                                string[] parts = line.Split('|');
+                                int personNum = Convert.ToInt32(parts[1]);
+                                if (personNum > maxPersonNum)
+                                    maxPersonNum = personNum;
+                            }
+                            r.Close();
+                            maxPersonNum++;
+                        }
+                    }
+                    catch(Exception ex)
+                    {
+
+                    }
+                    try
+                    { 
+                        using (StreamWriter s = new StreamWriter(selectedPersonGroup.PersonGroupId + "/Persons.dat", true))
+                        {
+                            s.WriteLine(personSelector.Text + "|" + maxPersonNum);
+                            s.Close();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+
+                    }
+#else
                     await faceServiceClient.CreatePersonInPersonGroupAsync(selectedPersonGroup.PersonGroupId, personSelector.Text);
+#endif
                     persons = await GetPersonsInPersonGroup(selectedPersonGroup.PersonGroupId);
                     personSelector.SelectedIndex = -1;
-
                     personSelector.Items.Clear();
                     foreach (Person person in persons)
                     {
