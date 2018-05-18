@@ -17,6 +17,12 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using OpenCvSharp;
 
+// If we're using OpenCV, all of the async methods will flag this warning since we don't actually do anything asynchronously
+// in OpenCV mode.  Just disable the warning.
+#if USE_OPENCV
+#pragma warning disable CS1998
+#endif
+
 namespace FaceId
 {
     public partial class MainForm : Form
@@ -37,7 +43,7 @@ namespace FaceId
         CascadeClassifier classifier = null;
         OpenCvSharp.Face.FaceRecognizer faceRecognizer = null;
 
-        private OpenCvSharp.Rect [] DetectFacesInImage(Mat img)
+        private OpenCvSharp.Rect [] DetectFacesInImage(Mat img, HaarDetectionType detectionType, OpenCvSharp.Size minSize)
         {
             if (classifier == null)
             {
@@ -48,16 +54,20 @@ namespace FaceId
             OpenCvSharp.Rect [] faces = classifier.DetectMultiScale(
                  image: img,
                  scaleFactor: 1.1,
-                 minNeighbors: 2,
-                 flags: HaarDetectionType.DoRoughSearch | HaarDetectionType.ScaleImage,
-                 minSize: new OpenCvSharp.Size(300, 300));
+                 minNeighbors: 5,
+//                 flags: HaarDetectionType.DoRoughSearch | HaarDetectionType.ScaleImage,
+//                 flags: HaarDetectionType.FindBiggestObject | HaarDetectionType.ScaleImage,
+                 flags: detectionType | HaarDetectionType.ScaleImage,
+                 minSize: minSize);
             return faces;
         }
 #endif
 
         private async void Form1_Load(object sender, EventArgs e)
         {
-#if !USE_OPENCV
+#if USE_OPENCV
+            faceServiceClient = null;
+#else
             try
             {
                 using (StreamReader configFile = new StreamReader("./FaceAPI.config"))
@@ -67,7 +77,7 @@ namespace FaceId
                     configFile.Close();
                 }
             }
-            catch (FileNotFoundException ex)
+            catch (FileNotFoundException)
             {
                 ConfigForm configForm = new ConfigForm();
                 configForm.configRequired = true;
@@ -168,7 +178,7 @@ namespace FaceId
                     pList.Add(p);
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
 
             }
@@ -203,7 +213,7 @@ namespace FaceId
                             s.Close();
                         }
                     }
-                    catch(Exception ex)
+                    catch(Exception)
                     {
 
                     }
@@ -254,10 +264,11 @@ namespace FaceId
                 foreach (string filename in openFileDialog.FileNames)
                 {
 #if USE_OPENCV
+                    count++;
                     PersonGroup selectedPersonGroup = personGroups[personGroupSelector.SelectedIndex];
                     Person selectedPerson = persons[personSelector.SelectedIndex];
                     Mat image = new Mat(filename, ImreadModes.GrayScale);
-                    OpenCvSharp.Rect[] faces = DetectFacesInImage(image);
+                    OpenCvSharp.Rect[] faces = DetectFacesInImage(image, HaarDetectionType.DoRoughSearch, new OpenCvSharp.Size(300,300));
                     if (faces.Length > 1)
                     {
                         MessageBox.Show(filename + ": Too many faces detected in this image", "Error");
@@ -275,19 +286,21 @@ namespace FaceId
                     if (faces.Length < 1)
                     {
                         MessageBox.Show(filename + ": No faces detected in this image", "Error");
-                        return;
                     }
-                    Mat crop = new Mat(image, faces[0]);
-                    Mat resizedImage = new Mat();
-                    Cv2.Resize(crop, resizedImage, new OpenCvSharp.Size(400, 400));
-                    Cv2.ImShow("Added Image", resizedImage);
-                    Cv2.WaitKey(0);
-                    Cv2.DestroyWindow("Added Image");
-
-                    using (StreamWriter s = new StreamWriter(selectedPersonGroup.PersonGroupId + "/TrainData.dat", true))
+                    else
                     {
-                        s.WriteLine(filename + "|" + selectedPerson.UserData);
-                        s.Close();
+                        Mat crop = new Mat(image, faces[0]);
+                        Mat resizedImage = new Mat();
+                        Cv2.Resize(crop, resizedImage, new OpenCvSharp.Size(400, 400));
+                        Cv2.ImShow("Added Image", resizedImage);
+                        Cv2.WaitKey(0);
+                        Cv2.DestroyWindow("Added Image");
+
+                        using (StreamWriter s = new StreamWriter(selectedPersonGroup.PersonGroupId + "/TrainData.dat", true))
+                        {
+                            s.WriteLine(filename + "|" + selectedPerson.UserData);
+                            s.Close();
+                        }
                     }
 #else
                     System.IO.MemoryStream imageMemoryStream = new MemoryStream();
@@ -442,7 +455,7 @@ namespace FaceId
                             maxPersonNum++;
                         }
                     }
-                    catch(Exception ex)
+                    catch(Exception)
                     {
 
                     }
@@ -454,7 +467,7 @@ namespace FaceId
                             s.Close();
                         }
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
 
                     }
@@ -507,7 +520,7 @@ namespace FaceId
                     string[] parts = line.Split('|');
 
                     Mat image = new Mat(parts[0], ImreadModes.GrayScale);
-                    OpenCvSharp.Rect[] faces = DetectFacesInImage(image);
+                    OpenCvSharp.Rect[] faces = DetectFacesInImage(image, HaarDetectionType.DoRoughSearch, new OpenCvSharp.Size(300,300));
                     if (faces.Length == 1)
                     {
                         Mat crop = new Mat(image, faces[0]);
@@ -571,22 +584,39 @@ namespace FaceId
             PersonGroup selectedPersonGroup = personGroups[personGroupSelector.SelectedIndex];
 #if USE_OPENCV
             Mat image = new Mat(filename, ImreadModes.GrayScale);
-            OpenCvSharp.Rect[] faces = DetectFacesInImage(image);
+            OpenCvSharp.Rect[] faces = DetectFacesInImage(image, HaarDetectionType.DoRoughSearch, new OpenCvSharp.Size(75,75));
+            if (faces.Length == 0)
+            {
+                imgInfoBox.Text = "No faces detected in this image.";
+                return;
+            }
+            imgInfoBox.Text = "";
+            int faceNum = 0;
             foreach (OpenCvSharp.Rect rect in faces)
             {
+                faceNum++;
                 Mat crop = new Mat(image, rect);
                 Mat resizedImage = new Mat();
                 Cv2.Resize(crop, resizedImage, new OpenCvSharp.Size(400, 400));
                 int result = faceRecognizer.Predict(resizedImage);
-                Face face = new Face();
-                face.FaceRectangle = new FaceRectangle();
-                face.FaceRectangle.Left = rect.Left;
-                face.FaceRectangle.Top = rect.Top;
-                face.FaceRectangle.Width = rect.Width;
-                face.FaceRectangle.Height = rect.Height;
-                faceList.Add(face);
-                faceNames.Add(persons[result].Name);
+                if (result > 0)
+                {
+                    Face face = new Face();
+                    face.FaceRectangle = new FaceRectangle();
+                    face.FaceRectangle.Left = rect.Left;
+                    face.FaceRectangle.Top = rect.Top;
+                    face.FaceRectangle.Width = rect.Width;
+                    face.FaceRectangle.Height = rect.Height;
+                    faceList.Add(face);
+                    faceNames.Add(persons[result - 1].Name);
+                    imgInfoBox.Text += String.Format("Face {0}: Identified as {1}\r\n", faceNum, persons[result - 1].Name);
+                }
+                else
+                {
+                    imgInfoBox.Text += "Unknown";
+                }
             }
+            imgBox.ImageLocation = filename;
             imgBox.Refresh();
 
 #else
@@ -697,7 +727,7 @@ namespace FaceId
 
                     scaledRect = new Rectangle(left, top, width, height);
                 }
-                Color penColor = Color.MediumSpringGreen;
+                Color penColor = Color.Green;
                 Pen pen = new Pen(penColor, 2f);
 
                 e.Graphics.DrawRectangle(pen, scaledRect);
@@ -720,12 +750,13 @@ namespace FaceId
                 }
 
                 string name = (string)faceNames[n];
-                int textPos = -15;
+                int textPos = -17;
                 Font font = new Font(FontFamily.GenericSansSerif, 10);
-                SolidBrush brush = new SolidBrush(penColor);
+                SolidBrush bkgBrush = new SolidBrush(penColor);
+                SolidBrush textBrush = new SolidBrush(Color.White);
                 if (name == "Unknown" && faceAttributes != null)
                 {
-                    string [] parts = faceAttributes.Split('|');
+                    string[] parts = faceAttributes.Split('|');
                     for (int m = 0; m < parts.Length; m++)
                     {
                         string s;
@@ -733,12 +764,18 @@ namespace FaceId
                             s = String.Format("{0} {1}", name, parts[m]);
                         else
                             s = parts[m];
-                        e.Graphics.DrawString(s, font, brush, (float)(left), (float)(top + textPos));
+                        SizeF size = e.Graphics.MeasureString(s, font);
+                        e.Graphics.FillRectangle(bkgBrush, (float)left, (float)top + textPos, size.Width, size.Height);
+                        e.Graphics.DrawString(s, font, textBrush, (float)(left), (float)(top + textPos));
                         textPos -= 15;
                     }
                 }
                 else
-                    e.Graphics.DrawString(name, font, brush, (float)(left), (float)(top + textPos));
+                {
+                    SizeF size = e.Graphics.MeasureString(name, font);
+                    e.Graphics.FillRectangle(bkgBrush, (float)left, (float)top + textPos, size.Width, size.Height);
+                    e.Graphics.DrawString(name, font, textBrush, (float)(left), (float)(top + textPos));
+                }
             }
         }
 
