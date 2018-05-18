@@ -35,11 +35,13 @@ namespace FaceId
 
 #if USE_OPENCV
         CascadeClassifier classifier = null;
+        OpenCvSharp.Face.FaceRecognizer faceRecognizer = null;
+
         private OpenCvSharp.Rect [] DetectFacesInImage(Mat img)
         {
             if (classifier == null)
             {
-                classifier = new CascadeClassifier(@".\haarcascade_frontalface_alt.xml");
+                classifier = new CascadeClassifier(@"../../../haarcascade_frontalface_alt.xml");
 //                var nestedCascade = new CascadeClassifier(@"..\..\Data\haarcascade_eye_tree_eyeglasses.xml");
             }
 
@@ -48,82 +50,14 @@ namespace FaceId
                  scaleFactor: 1.1,
                  minNeighbors: 2,
                  flags: HaarDetectionType.DoRoughSearch | HaarDetectionType.ScaleImage,
-                 minSize: new OpenCvSharp.Size(30, 30));
-            if (faces.Length != 1)
-            {
-                Console.WriteLine("Too many or not enough faces detected.");
-            }
-
+                 minSize: new OpenCvSharp.Size(300, 300));
             return faces;
         }
 #endif
 
         private async void Form1_Load(object sender, EventArgs e)
         {
-#if USE_OPENCV
-            int numTrainingFaces = 6;
-            Mat[] images = new Mat [numTrainingFaces];
-            int[] labels = new int [numTrainingFaces];
-
-            for (int n = 0; n < numTrainingFaces; n++)
-                images[n] = new Mat();
-
-          
-            Mat image = new Mat("g:/photos/wallpaper/DS2_0541.jpg", ImreadModes.GrayScale);
-            OpenCvSharp.Rect[] faces = DetectFacesInImage(image);
-            Mat crop = new Mat(image, faces[0]);
-            Cv2.Resize(crop, images[0], new OpenCvSharp.Size(400,400));
-            labels[0] = 0;
-
-            image = new Mat("g:/photos/wallpaper/DS2_0903-crop.jpg", ImreadModes.GrayScale);
-            faces = DetectFacesInImage(image);
-            crop = new Mat(image, faces[0]);
-            Cv2.Resize(crop, images[1], new OpenCvSharp.Size(400, 400));
-            labels[1] = 0;
-
-            image = new Mat("g:/photos/wallpaper/DS2_1013.jpg", ImreadModes.GrayScale);
-            faces = DetectFacesInImage(image);
-            crop = new Mat(image, faces[0]);
-            Cv2.Resize(crop, images[2], new OpenCvSharp.Size(400, 400));
-            labels[2] = 0;
-
-            image = new Mat("g:/photos/wallpaper/DS2_1014.jpg", ImreadModes.GrayScale);
-            faces = DetectFacesInImage(image);
-            crop = new Mat(image, faces[0]);
-            Cv2.Resize(crop, images[3], new OpenCvSharp.Size(400, 400));
-            labels[3] = 0;
-
-            image = new Mat("g:/photos/wallpaper/3037 - portrait crop.jpg", ImreadModes.GrayScale);
-            faces = DetectFacesInImage(image);
-            crop = new Mat(image, faces[0]);
-            Cv2.Resize(crop, images[4], new OpenCvSharp.Size(400, 400));
-            labels[4] = 1;
-
-            image = new Mat("g:/photos/wallpaper/DS2_0433-portrait.jpg", ImreadModes.GrayScale);
-            faces = DetectFacesInImage(image);
-            crop = new Mat(image, faces[0]);
-            Cv2.Resize(crop, images[5], new OpenCvSharp.Size(400, 400));
-            labels[5] = 1;
-
-            OpenCvSharp.Face.FaceRecognizer faceRecognizer = OpenCvSharp.Face.FisherFaceRecognizer.Create();
-            faceRecognizer.Train(images, labels);
-            faceServiceClient = null;
-
-            Mat img = new Mat("g:/photos/wallpaper/DSC_0630.jpg", ImreadModes.GrayScale);
-            faces = DetectFacesInImage(img);
-            Mat testImage1 = new Mat();
-            crop = new Mat(img, faces[0]);
-            Cv2.Resize(crop, testImage1, new OpenCvSharp.Size(400, 400));
-            int result = faceRecognizer.Predict(testImage1);
-
-            img = new Mat("g:/photos/wallpaper/DSC_5567.jpg", ImreadModes.GrayScale);
-            faces = DetectFacesInImage(img);
-            Mat testImage2 = new Mat();
-            crop = new Mat(img, faces[0]);
-            Cv2.Resize(crop, testImage2, new OpenCvSharp.Size(400, 400));
-            int result2 = faceRecognizer.Predict(testImage2);
-            personGroups = await GetPersonGroups();
-#else
+#if !USE_OPENCV
             try
             {
                 using (StreamReader configFile = new StreamReader("./FaceAPI.config"))
@@ -157,8 +91,8 @@ namespace FaceId
             }
 
             faceServiceClient = new FaceServiceClient(apiKey, url);
-            personGroups = await GetPersonGroups();
 #endif
+            personGroups = await GetPersonGroups();
             foreach (PersonGroup personGroup in personGroups)
             {
                 personGroupSelector.Items.Add(personGroup.Name);
@@ -322,6 +256,34 @@ namespace FaceId
 #if USE_OPENCV
                     PersonGroup selectedPersonGroup = personGroups[personGroupSelector.SelectedIndex];
                     Person selectedPerson = persons[personSelector.SelectedIndex];
+                    Mat image = new Mat(filename, ImreadModes.GrayScale);
+                    OpenCvSharp.Rect[] faces = DetectFacesInImage(image);
+                    if (faces.Length > 1)
+                    {
+                        MessageBox.Show(filename + ": Too many faces detected in this image", "Error");
+                        foreach (OpenCvSharp.Rect rect in faces)
+                        {
+                            Mat errCrop = new Mat(image, rect);
+                            Mat errResizedImage = new Mat();
+                            Cv2.Resize(errCrop, errResizedImage, new OpenCvSharp.Size(400, 400));
+                            Cv2.ImShow("Detected Face", errResizedImage);
+                            Cv2.WaitKey(0);
+                            Cv2.DestroyWindow("Detected Face");
+                        }
+                        return;
+                    }
+                    if (faces.Length < 1)
+                    {
+                        MessageBox.Show(filename + ": No faces detected in this image", "Error");
+                        return;
+                    }
+                    Mat crop = new Mat(image, faces[0]);
+                    Mat resizedImage = new Mat();
+                    Cv2.Resize(crop, resizedImage, new OpenCvSharp.Size(400, 400));
+                    Cv2.ImShow("Added Image", resizedImage);
+                    Cv2.WaitKey(0);
+                    Cv2.DestroyWindow("Added Image");
+
                     using (StreamWriter s = new StreamWriter(selectedPersonGroup.PersonGroupId + "/TrainData.dat", true))
                     {
                         s.WriteLine(filename + "|" + selectedPerson.UserData);
@@ -534,7 +496,34 @@ namespace FaceId
         private async void trainButton_Click(object sender, EventArgs e)
         {
             PersonGroup selectedPersonGroup = personGroups[personGroupSelector.SelectedIndex];
+#if USE_OPENCV
+            List<Mat> images = new List<Mat>();
+            List<int> labels = new List<int>();
+            using (StreamReader r = new StreamReader(selectedPersonGroup.PersonGroupId + "/TrainData.dat"))
+            {
+                while (!r.EndOfStream)
+                {
+                    string line = r.ReadLine();
+                    string[] parts = line.Split('|');
+
+                    Mat image = new Mat(parts[0], ImreadModes.GrayScale);
+                    OpenCvSharp.Rect[] faces = DetectFacesInImage(image);
+                    if (faces.Length == 1)
+                    {
+                        Mat crop = new Mat(image, faces[0]);
+                        Mat resizedImage = new Mat();
+                        Cv2.Resize(crop, resizedImage, new OpenCvSharp.Size(400, 400));
+                        images.Add(resizedImage);
+                        labels.Add(Convert.ToInt32(parts[1]));
+                    }
+                }
+                faceRecognizer = OpenCvSharp.Face.FisherFaceRecognizer.Create();
+                faceRecognizer.Train(images, labels);
+                faceRecognizer.Write(selectedPersonGroup.PersonGroupId + "/Recognizer.dat");
+            }
+#else
             await faceServiceClient.TrainPersonGroupAsync(selectedPersonGroup.PersonGroupId);
+#endif
         }
 
         Dictionary<Guid, Face> faceDict = new Dictionary<Guid, Face>();
@@ -548,6 +537,11 @@ namespace FaceId
             DialogResult result = openFileDialog.ShowDialog();
             if (result == DialogResult.OK)
             {
+#if USE_OPENCV
+                PersonGroup selectedPersonGroup = personGroups[personGroupSelector.SelectedIndex];
+                faceRecognizer = OpenCvSharp.Face.FisherFaceRecognizer.Create();
+                faceRecognizer.Read(selectedPersonGroup.PersonGroupId + "/Recognizer.dat");
+#endif
                 files = openFileDialog.FileNames;
                 currFileIdx = 0;
 
@@ -575,6 +569,27 @@ namespace FaceId
             picLabel.Text = String.Format("{0}/{1}", currFileIdx + 1, files.Length);
 
             PersonGroup selectedPersonGroup = personGroups[personGroupSelector.SelectedIndex];
+#if USE_OPENCV
+            Mat image = new Mat(filename, ImreadModes.GrayScale);
+            OpenCvSharp.Rect[] faces = DetectFacesInImage(image);
+            foreach (OpenCvSharp.Rect rect in faces)
+            {
+                Mat crop = new Mat(image, rect);
+                Mat resizedImage = new Mat();
+                Cv2.Resize(crop, resizedImage, new OpenCvSharp.Size(400, 400));
+                int result = faceRecognizer.Predict(resizedImage);
+                Face face = new Face();
+                face.FaceRectangle = new FaceRectangle();
+                face.FaceRectangle.Left = rect.Left;
+                face.FaceRectangle.Top = rect.Top;
+                face.FaceRectangle.Width = rect.Width;
+                face.FaceRectangle.Height = rect.Height;
+                faceList.Add(face);
+                faceNames.Add(persons[result].Name);
+            }
+            imgBox.Refresh();
+
+#else
             try
             {
                 FaceAttributeType[] faceAttributes = { FaceAttributeType.Age, FaceAttributeType.Gender, FaceAttributeType.Glasses, FaceAttributeType.Emotion, FaceAttributeType.Accessories };
@@ -622,6 +637,7 @@ namespace FaceId
             {
                 imgInfoBox.Text = String.Format("Error returned from Face API: {0}", ex.Message);
             }
+#endif
         }
 
         private void imgBox_Click(object sender, EventArgs e)
@@ -686,20 +702,22 @@ namespace FaceId
 
                 e.Graphics.DrawRectangle(pen, scaledRect);
 
-
-                string faceAttributes = String.Format("Age {0}|{1}", Math.Round(face.FaceAttributes.Age, MidpointRounding.AwayFromZero), face.FaceAttributes.Gender);
-                if (face.FaceAttributes.Glasses != Glasses.NoGlasses)
-                    faceAttributes += "|Glasses";
-
-                if (face.FaceAttributes.Accessories != null)
+                string faceAttributes = null;
+                if (face.FaceAttributes != null)
                 {
-                    foreach (Accessory a in face.FaceAttributes.Accessories)
+                    faceAttributes = String.Format("Age {0}|{1}", Math.Round(face.FaceAttributes.Age, MidpointRounding.AwayFromZero), face.FaceAttributes.Gender);
+                    if (face.FaceAttributes.Glasses != Glasses.NoGlasses)
+                        faceAttributes += "|Glasses";
+
+                    if (face.FaceAttributes.Accessories != null)
                     {
-                        if (a.Type == AccessoryType.Headwear)
-                            faceAttributes += "|Hat";
+                        foreach (Accessory a in face.FaceAttributes.Accessories)
+                        {
+                            if (a.Type == AccessoryType.Headwear)
+                                faceAttributes += "|Hat";
+                        }
                     }
                 }
-
 
                 string name = (string)faceNames[n];
                 int textPos = -15;
