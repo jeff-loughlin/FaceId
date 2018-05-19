@@ -1,4 +1,4 @@
-﻿#define USE_OPENCV
+﻿//#define USE_OPENCV
 
 using Microsoft.ProjectOxford.Face;
 using Microsoft.ProjectOxford.Face.Contract;
@@ -281,9 +281,8 @@ namespace FaceId
                             Cv2.WaitKey(0);
                             Cv2.DestroyWindow("Detected Face");
                         }
-                        return;
                     }
-                    if (faces.Length < 1)
+                    else if (faces.Length < 1)
                     {
                         MessageBox.Show(filename + ": No faces detected in this image", "Error");
                     }
